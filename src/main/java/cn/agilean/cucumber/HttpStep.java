@@ -73,7 +73,8 @@ public class HttpStep {
 
     /**
      * 暴力传递COOKIE信息。
-     * XXX 这个如果域不一样会出问题，操蛋的设置方式，改变httpclient失败，共享一个的时候会爆cliet没有关闭不能继续使用。下一次试试复用cookie store CookieStore
+     * XXX 这个如果域不一样会出问题，操蛋的设置方式，改变httpclient失败，共享一个的时候会爆cliet没有关闭不能继续使用。
+     * 下一次试试复用cookie store CookieStore
      */
     private Map<String, String> sessionCookies = Collections.EMPTY_MAP;
 
@@ -127,10 +128,10 @@ public class HttpStep {
 
     @Given("^HEADER$")
     public void headers(String properties) throws IOException {
-        Properties p = new Properties();
-        p.load(new StringReader(properties));
-        Set<Entry<Object, Object>> entrySet = p.entrySet();
-        for (Entry<Object, Object> item : entrySet) {
+        Map<String, String> p = textParser.parse(properties);
+        Set<Entry<String, String>> entrySet = p.entrySet();
+        for (Entry<String, String> item : entrySet) {
+            logger.info("add header {} {}", item.getKey(), item.getValue());
             headers.put((String) item.getKey(), (String) item.getValue());
         }
     }
@@ -142,10 +143,10 @@ public class HttpStep {
 
     @Given("^COOKIE$")
     public void cookies(String properties) throws IOException {
-        Properties p = new Properties();
-        p.load(new StringReader(properties));
-        Set<Entry<Object, Object>> entrySet = p.entrySet();
-        for (Entry<Object, Object> item : entrySet) {
+        Map<String, String> p = textParser.parse(properties);
+        Set<Entry<String, String>> entrySet = p.entrySet();
+        for (Entry<String, String> item : entrySet) {
+            logger.info("add cookie {} {}", item.getKey(), item.getValue());
             cookies.put((String) item.getKey(), (String) item.getValue());
         }
     }
@@ -201,18 +202,25 @@ public class HttpStep {
         resetRequest();
     }
 
-    @Given("^POST (FORM|JSON)? (.*)$")
-    public void post(String contentType, String url,String body)  {
-        if(hasText(body)){
-            Map<String, String> requestParam = textParser.parse(body);
-            updata.putAll(requestParam);
+    @Given("^POST (FORM |JSON )?(.*)$")
+    public void post(String contentType, String url, String body) {
+        if ("FORM".equals(contentType) || "JSON".equals(contentType)) {
+            if (hasText(body)) {
+                Map<String, String> requestParam = textParser.parse(body);
+                updata.putAll(requestParam);
+            }
+            prepareSession().contentType(contentTypes.get(contentType));
+            if (contentType.equals("FORM"))
+                sutRequest.formParameters(updata);
+            else
+                sutRequest.body(updata);
+        } else {
+            prepareSession();
+            sutRequest.contentType("text/xml; charset=UTF-8");
+            sutRequest.body(body);
         }
-        prepareSession().contentType(contentTypes.get(contentType));
-        if (contentType.equals("FORM"))
-            sutRequest.formParameters(updata);
-        else
-            sutRequest.body(updata);
         sutResponse = sutRequest.when().post(url).then();
+        System.out.println(sutResponse.extract().asString());
         afterResponse();
         resetRequest();
     }

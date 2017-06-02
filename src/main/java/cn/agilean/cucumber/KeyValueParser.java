@@ -10,9 +10,9 @@ import com.google.common.base.Splitter;
 
 /**
  * 尝试用多种常见的分隔符将一个多行文本分割成 HashMap&lt;String,String&gt;.
- *
+ * 
  * <p>
- *
+ * 按照顺序尝试：等于号、冒号、TAB、中文冒号、空格
  *
  * @author Alex Lei.
  *
